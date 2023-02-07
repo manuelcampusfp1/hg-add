@@ -1,0 +1,9 @@
+{
+    "java.project.sourcePaths": ["src"],
+    "java.project.outputPath": "bin",
+    "java.project.referencedLibraries": [
+        "lib/**/*.jar",
+        "mongo-java-driver-3.12.11.jar",
+        "logback-classic-1.4.5.jar"
+    ]
+}
