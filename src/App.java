@@ -3,6 +3,7 @@ import java.time.format.DateTimeParseException;
 import java.util.Scanner;
 import java.util.logging.Level;
 
+import com.mongodb.MongoWriteException;
 import com.mongodb.client.*;
 import org.bson.Document;
 
@@ -26,10 +27,10 @@ public class App {
             System.out.println("1. Agregar un nuevo Cliente");
             System.out.println("2. Agregar una incidencia");
             System.out.println("3. Ver un Cliente");
-            System.out.println("4. Info tecnicos");
+            System.out.println("4. Info direccion");
             System.out.println("5. Salir");
             System.out.print("Opcion: ");
-            opcion = Integer.parseInt(sc.nextLine());
+            opcion = helpers.pedirEntero(sc);
 
             switch (opcion) {
                 case 1:
@@ -42,29 +43,25 @@ public class App {
                     verCliente(clientedb, historialClientedb, sc);
                     break;
                 case 4:
-                    infoTecnicos(clientedb, historialClientedb, sc);
+                    infoDireccion(clientedb, historialClientedb, sc);
                     break;
                 case 5:
                     System.out.println("Saliendo...");
                     break;
             }
-        } while (opcion != 4);
+        } while (opcion != 5);
         
         // Cerrar la conexión
         mongoClient.close();
     }
 
-    private static void infoTecnicos(MongoCollection<Document> clientedb, MongoCollection<Document> historialClientedb, Scanner sc) {
+    private static void infoDireccion(MongoCollection<Document> clientedb, MongoCollection<Document> historialClientedb, Scanner sc) {
 
         System.out.println("--- Dirección ---");
         System.out.println("1. Numero de llamadas recibidas totales");
         System.out.println("2. Llamadas en una fecha dada");
-            System.out.println("mostrar numero de hardware");
-            System.out.println("mostrar numero de software");
-            System.out.println("mostrar numero solucionaron problema");
-            System.out.println("mostrar numero necesitaron reparacion");
         System.out.print("Opcion: ");
-        int op = Integer.parseInt(sc.nextLine());
+        int op = helpers.pedirEntero(sc);
         if(op == 1){
             //llamadas recibidas totales
             long llamadasTotales = historialClientedb.countDocuments();
@@ -75,17 +72,36 @@ public class App {
             boolean parseado = true;
             do {
                 System.out.println("introduce una fecha válida");
-                String date = sc.next();
+                String date = sc.nextLine();
                 if (date.equals("salir")){
                     parseado = false;
                 }
                 try{
-                    /*LocalDate fecha = LocalDate.parse(date);
-                    LocalDate timestamp = LocalDate.from(fecha);
-                    System.out.println(timestamp);*/
+                    long numLlamadas=0;
+                    long countHardware=0;
+                    long countSoftware=0;
+                    long countSolucionadoTrue=0;
+                    long countSolucionadoFalse=0;
                     for (Document doc : historialClientedb.find(eq("fecha",date))) {
-                        System.out.println(doc.toJson());
+                        numLlamadas++;
                     }
+                    for (Document doc : historialClientedb.find(eq("problema","hardware"))) {
+                        countHardware++;
+                    }
+                    for (Document doc : historialClientedb.find(eq("problema","software"))) {
+                        countSoftware++;
+                    }
+                    for (Document doc : historialClientedb.find(eq("solucionado","true"))) {
+                        countSolucionadoTrue++;
+                    }
+                    for (Document doc : historialClientedb.find(eq("solucionado","false"))) {
+                        countSolucionadoFalse++;
+                    }
+                    System.out.println("número llamadas: "+numLlamadas);
+                    System.out.println("numero hardware: "+countHardware);
+                    System.out.println("numero software: "+countSoftware);
+                    System.out.println("numero solucionadas: "+countSolucionadoTrue);
+                    System.out.println("numero no solucionadas: "+countSolucionadoFalse);
                     parseado = false;
                 }catch(DateTimeParseException e){
                     parseado = true;
@@ -108,20 +124,23 @@ public class App {
         System.out.print("Apellido: ");
         String apellidoCliente = sc.nextLine();
         System.out.print("Telefono: ");
-        String telefonoCliente = sc.nextLine();
+        int telefonoCliente = helpers.pedirEntero(sc);
         
         // Crear un nuevo contacto
         Document cliente = new Document("_id", "" + dniCliente)
                 .append("nombre", "" + nombreCliente)
                 .append("apellidos", "" + apellidoCliente)
-                .append("telefono",Integer.parseInt(telefonoCliente));
-            clientedb.insertOne(cliente);
-        
+                .append("telefono",telefonoCliente);
+            try{
+                clientedb.insertOne(cliente);
+            }catch(MongoWriteException e){
+            System.out.println("error en la inserción, revise la no duplicidad de los datos del señor");
+        }
 
         System.out.println("--- Historial de "+ nombreCliente + " ----");
 
         System.out.print("Id de la incidencia: ");
-        String idHistorial = sc.nextLine();
+        int idHistorial = helpers.pedirEntero(sc);
 
         System.out.println("Fecha de hoy :"+LocalDate.now());
 
@@ -133,7 +152,7 @@ public class App {
         System.out.println("1. hardware");
         System.out.println("2. software");
         System.out.print("Opcion: ");
-        int op = Integer.parseInt(sc.nextLine());
+        int op = helpers.pedirEntero(sc);
         if(op == 1){
           problemaHistorial = "hardware";
         } else if(op == 2){
@@ -147,7 +166,7 @@ public class App {
         System.out.println("1. Fisica");
         System.out.println("2. Telefonica");
         System.out.print("Opcion: ");
-        op = Integer.parseInt(sc.nextLine());;
+        op = helpers.pedirEntero(sc);
         if(op == 1){
             repacionHistorial = "fisica";
         } else if(op == 2) {
@@ -161,7 +180,7 @@ public class App {
         System.out.println("1. Si");
         System.out.println("2. No");
         System.out.print("Opcion: ");
-        op = Integer.parseInt(sc.nextLine());
+        op = helpers.pedirEntero(sc);
         if(op == 1){
             solucionadoHistorial = "true";
         } else if(op == 2) {
@@ -171,14 +190,18 @@ public class App {
         }
        
          // Crear un nuevo contacto
-         Document historialCliente = new Document("_id",+ Integer.parseInt(idHistorial))
+         Document historialCliente = new Document("_id",+ idHistorial)
          .append("fecha",""+ LocalDate.now())
          .append("dni", "" + dniCliente)
          .append("motivo", "" + motivoHistorial)
          .append("problema", "" + problemaHistorial)
          .append("reparacion", "" + repacionHistorial)
          .append("solucionado", "" + solucionadoHistorial);
-         historialClientedb.insertOne(historialCliente);
+         try{
+             historialClientedb.insertOne(historialCliente);
+         }catch (MongoWriteException e){
+             System.out.println("error en la insercion, revise la no duplicidad de los datos");
+         }
     }
 
     public static void verCliente(MongoCollection<Document> clientedb,MongoCollection<Document> historialClientedb, Scanner sc){
@@ -187,7 +210,11 @@ public class App {
 
         Document nombreBuscar = clientedb.find(eq("_id", ""+dniCliente)).first();
         System.out.println("-------- Datos de "+ dniCliente +" --------");
-        System.out.println(nombreBuscar.toJson());
+        if (nombreBuscar==null){
+            System.out.println("no se ha encontrado el señor en la base de datos");
+        }else{
+            System.out.println(nombreBuscar.toJson());
+        }
         
 
         System.out.println("-------- Historial de "+ dniCliente +" --------");
@@ -202,7 +229,7 @@ public class App {
         String dniHistorial = sc.nextLine();
 
         System.out.print("Id de la incidencia: ");
-        String idHistorial = sc.nextLine();
+        int idHistorial = helpers.pedirEntero(sc);
 
         System.out.print("Motivo: ");
         String motivoHistorial = sc.nextLine();
@@ -212,7 +239,7 @@ public class App {
         System.out.println("1. hardware");
         System.out.println("2. software");
         System.out.print("Opcion: ");
-        int op = Integer.parseInt(sc.nextLine());
+        int op = helpers.pedirEntero(sc);
         if(op == 1){
           problemaHistorial = "hardware";
         } else if(op == 2){
@@ -226,7 +253,7 @@ public class App {
         System.out.println("1. Fisica");
         System.out.println("2. Telefonica");
         System.out.print("Opcion: ");
-        op = Integer.parseInt(sc.nextLine());;
+        op = helpers.pedirEntero(sc);
         if(op == 1){
             repacionHistorial = "fisica";
         } else if(op == 2) {
@@ -240,7 +267,7 @@ public class App {
         System.out.println("1. Si");
         System.out.println("2. No");
         System.out.print("Opcion: ");
-        op = Integer.parseInt(sc.nextLine());
+        op = helpers.pedirEntero(sc);
         if(op == 1){
             solucionadoHistorial = "true";
         } else if(op == 2) {
@@ -250,13 +277,17 @@ public class App {
         }
        
          // Crear un nuevo contacto
-         Document historialCliente = new Document("_id",+ Integer.parseInt(idHistorial))
-         .append("fecha", LocalDate.now())
+         Document historialCliente = new Document("_id",+ idHistorial)
+         .append("fecha", ""+LocalDate.now())
          .append("dni", "" + dniHistorial)
          .append("motivo", "" + motivoHistorial)
          .append("problema", "" + problemaHistorial)
          .append("reparacion", "" + repacionHistorial)
          .append("solucionado", "" + solucionadoHistorial);
-         historialClientedb.insertOne(historialCliente);
+         try{
+             historialClientedb.insertOne(historialCliente);
+         }catch(Exception e){
+             System.out.println("error en la inserción, revise la no duplicidad de los datos");
+         }
     }
 }
