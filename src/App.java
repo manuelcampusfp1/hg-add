@@ -1,12 +1,11 @@
-import java.util.Date;
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.Scanner;
 import java.util.logging.Level;
 
+import com.mongodb.client.*;
 import org.bson.Document;
-import com.mongodb.client.MongoClient;
-import com.mongodb.client.MongoClients;
-import com.mongodb.client.MongoCollection;
-import com.mongodb.client.MongoDatabase;
+
 import static com.mongodb.client.model.Filters.*;
 
 public class App {
@@ -15,7 +14,7 @@ public class App {
         MongoClient mongoClient = MongoClients.create("mongodb://localhost:27017");
         
         // Seleccionar la base de datos y la colección
-        MongoDatabase database = mongoClient.getDatabase("HitoGrupal");
+        MongoDatabase database = mongoClient.getDatabase("hitoGrupal");
         MongoCollection<Document> clientedb = database.getCollection("Clientes");
         MongoCollection<Document> historialClientedb = database.getCollection("HistorialClientes");
         java.util.logging.Logger.getLogger("org.mongodb.driver").setLevel(Level.OFF);
@@ -27,7 +26,8 @@ public class App {
             System.out.println("1. Agregar un nuevo Cliente");
             System.out.println("2. Agregar una incidencia");
             System.out.println("3. Ver un Cliente");
-            System.out.println("4. Salir");
+            System.out.println("4. Info tecnicos");
+            System.out.println("5. Salir");
             System.out.print("Opcion: ");
             opcion = Integer.parseInt(sc.nextLine());
 
@@ -42,6 +42,9 @@ public class App {
                     verCliente(clientedb, historialClientedb, sc);
                     break;
                 case 4:
+                    infoTecnicos(clientedb, historialClientedb, sc);
+                    break;
+                case 5:
                     System.out.println("Saliendo...");
                     break;
             }
@@ -49,6 +52,51 @@ public class App {
         
         // Cerrar la conexión
         mongoClient.close();
+    }
+
+    private static void infoTecnicos(MongoCollection<Document> clientedb, MongoCollection<Document> historialClientedb, Scanner sc) {
+
+        System.out.println("--- Dirección ---");
+        System.out.println("1. Numero de llamadas recibidas totales");
+        System.out.println("2. Llamadas en una fecha dada");
+            System.out.println("mostrar numero de hardware");
+            System.out.println("mostrar numero de software");
+            System.out.println("mostrar numero solucionaron problema");
+            System.out.println("mostrar numero necesitaron reparacion");
+        System.out.print("Opcion: ");
+        int op = Integer.parseInt(sc.nextLine());
+        if(op == 1){
+            //llamadas recibidas totales
+            long llamadasTotales = historialClientedb.countDocuments();
+            System.out.println("El número de llamadas totales ha sido: "+llamadasTotales);
+        } else if(op == 2){
+            //llamadas en una fecha dada
+
+            boolean parseado = true;
+            do {
+                System.out.println("introduce una fecha válida");
+                String date = sc.next();
+                if (date.equals("salir")){
+                    parseado = false;
+                }
+                try{
+                    /*LocalDate fecha = LocalDate.parse(date);
+                    LocalDate timestamp = LocalDate.from(fecha);
+                    System.out.println(timestamp);*/
+                    for (Document doc : historialClientedb.find(eq("fecha",date))) {
+                        System.out.println(doc.toJson());
+                    }
+                    parseado = false;
+                }catch(DateTimeParseException e){
+                    parseado = true;
+                    System.out.println("Error, introduce una fecha válida o escribe salir");
+                }
+            }while(parseado);
+
+        } else {
+            System.err.println("Error");
+        }
+
     }
 
     public static void agregarCliente(MongoCollection<Document> clientedb,MongoCollection<Document> historialClientedb, Scanner sc) {
@@ -74,6 +122,8 @@ public class App {
 
         System.out.print("Id de la incidencia: ");
         String idHistorial = sc.nextLine();
+
+        System.out.println("Fecha de hoy :"+LocalDate.now());
 
         System.out.print("Motivo: ");
         String motivoHistorial = sc.nextLine();
@@ -122,7 +172,7 @@ public class App {
        
          // Crear un nuevo contacto
          Document historialCliente = new Document("_id",+ Integer.parseInt(idHistorial))
-         .append("fecha",new Date())
+         .append("fecha",""+ LocalDate.now())
          .append("dni", "" + dniCliente)
          .append("motivo", "" + motivoHistorial)
          .append("problema", "" + problemaHistorial)
@@ -171,7 +221,7 @@ public class App {
             System.err.println("Error");
         }
 
-        String repacionHistorial = null;;
+        String repacionHistorial = null;
         System.out.println("--- Reparacion --- ");
         System.out.println("1. Fisica");
         System.out.println("2. Telefonica");
@@ -185,7 +235,7 @@ public class App {
             System.err.println("Error");
         }
 
-        String solucionadoHistorial = null;;
+        String solucionadoHistorial = null;
         System.out.println("--- Solucionado --- ");
         System.out.println("1. Si");
         System.out.println("2. No");
@@ -201,7 +251,7 @@ public class App {
        
          // Crear un nuevo contacto
          Document historialCliente = new Document("_id",+ Integer.parseInt(idHistorial))
-         .append("fecha", new Date())
+         .append("fecha", LocalDate.now())
          .append("dni", "" + dniHistorial)
          .append("motivo", "" + motivoHistorial)
          .append("problema", "" + problemaHistorial)
